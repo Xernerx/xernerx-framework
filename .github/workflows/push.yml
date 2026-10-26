@@ -30,7 +30,7 @@ jobs:
 
       - name: Run tests
         id: test
-        run: npm test
+        run: npm test && npx tsup
         continue-on-error: true
 
       - name: Set lowest passing Node version

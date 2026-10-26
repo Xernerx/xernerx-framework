@@ -1,11 +1,8 @@
 /** @format */
 
-import { XernerxBase } from './XernerxBase.js';
-import boxen from 'boxen';
+import { XernerxBase, t } from './XernerxBase.js';
 import fs from 'fs';
-import ora from 'ora';
 import path from 'path';
-import sharpyy from 'sharpyy';
 import pkg from '../../package.json' with { type: 'json' };
 import { XernerxInfo } from './XernerxInfo.js';
 
@@ -13,20 +10,9 @@ export class XernerxInitial extends XernerxBase {
 	constructor(type: 'Client' | 'ShardClient') {
 		super();
 
-		console.clear();
-
-		console.info(
-			boxen(sharpyy('XERNERX', 'txRainbow', 'bold'), {
-				borderStyle: 'round',
-				borderColor: 'magenta',
-				textAlignment: 'center',
-				fullscreen: (width, height) => [width, 4],
-			})
-		);
-
-		const spinner = ora().start(`${this.base()}${type == 'Client' ? 'Starting...' : 'Sharding...'}`);
-
-		setInterval(() => (spinner.text = `${this.base()}`), 500);
+		t.clear();
+		t.box('XERNERX');
+		t.start(type == 'Client' ? 'Starting...' : 'Sharding...');
 
 		this.version();
 	}

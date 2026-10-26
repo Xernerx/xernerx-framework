@@ -1,5 +1,6 @@
 /** @format */
 
+// Client statistics
 export interface XernerxClientStats {
 	onlineSince: number | null;
 	guildCount: number | null;

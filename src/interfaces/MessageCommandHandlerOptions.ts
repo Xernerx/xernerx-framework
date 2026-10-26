@@ -1,5 +1,6 @@
 /** @format */
 
+// Message command handler options
 export interface MessageCommandHandlerOptions {
 	directory: string | null;
 	prefix?: string | string[];

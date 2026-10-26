@@ -1,13 +1,11 @@
 /** @format */
 
-import ora from 'ora';
-
-import { XernerxBase } from './XernerxBase.js';
+import { XernerxBase, t } from './XernerxBase.js';
 
 export class XernerxWarn extends XernerxBase {
 	constructor(message: string) {
 		super();
 
-		ora().warn(`${this.base()}${message}`);
+		t.warn(message);
 	}
 }

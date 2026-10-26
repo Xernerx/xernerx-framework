@@ -5,7 +5,7 @@ import { Message, MessageContextMenuCommandInteraction, UserContextMenuCommandIn
 import { ContextCommandBuilder } from '../build/ContextCommandBuilder.js';
 import { XernerxUser } from '../model/XernerxUser.js';
 
-type BaseOptions = {
+export type BaseOptions = {
 	command: ContextCommandBuilder;
 };
 

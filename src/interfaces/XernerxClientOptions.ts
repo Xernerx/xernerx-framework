@@ -1,5 +1,6 @@
 /** @format */
 
+// Client configuration options
 export interface XernerxClientOptions {
 	token: string;
 	global?: boolean;

@@ -2,6 +2,7 @@
 	"include": ["src"],
 	"exclude": ["node_modules", ".github", "docs"],
 	"compilerOptions": {
+		"ignoreDeprecations": "6.0",
 		// Type Checking
 		"types": ["node"],
 		"allowUnreachableCode": false,

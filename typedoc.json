@@ -11,7 +11,7 @@
 	"githubPages": true,
 	"excludeReferences": true,
 	"includeVersion": true,
-	"projectDocuments": ["documents/*.md"],
+	"projectDocuments": ["CHANGELOG.md"],
 	"router": "structure-dir",
 	"footerLastModified": true,
 
@@ -50,5 +50,16 @@
 		"notExported": true,
 		"invalidLink": true,
 		"notDocumented": false
+	},
+	"externalSymbolLinkMappings": {
+		"discord.js": {
+			"Client.fetchStickerPacks": "#",
+			"User.avatarDecorationData": "#"
+		},
+		"discord-hybrid-sharding": {
+			"ClusterManager.mode": "#",
+			"ClusterManager#mode": "#",
+			"DjsDiscordClient": "#"
+		}
 	}
 }

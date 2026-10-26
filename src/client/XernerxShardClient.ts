@@ -52,7 +52,7 @@ export class XernerxShardClient extends ClusterManager {
 
 				await cluster.send({ type: 'xernerx' });
 
-				if (this.onlineShards.size == (this.totalClusters || this.totalShards)) this.#update();
+				if (this.onlineShards.size == (this.totalClusters || this.totalShards)) this.update();
 			});
 
 			cluster.on('disconnect', () => {
@@ -67,7 +67,7 @@ export class XernerxShardClient extends ClusterManager {
 		this.spawn({ timeout: -1 });
 	}
 
-	async #update() {
+	private async update() {
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 
 		setInterval(async () => {

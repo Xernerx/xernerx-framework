@@ -4,8 +4,6 @@
 test
 ![ICON](https://dummi.me/icons/XernerxLogoPurple.png)
 
-[![](./docs/icons/Xernerx%20-%20Logo%20-%20Purple.png)](https://xernerx.github.io/xernerx)
-
 [![Discord](https://img.shields.io/discord/784094726432489522?logo=discord)](https://discord.gg/teNWyb69dq)
 ![npm](https://img.shields.io/npm/dw/xernerx)
 ![npm](https://img.shields.io/npm/dt/xernerx)

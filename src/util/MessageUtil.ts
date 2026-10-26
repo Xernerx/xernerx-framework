@@ -19,14 +19,14 @@ export class MessageUtil extends BaseUtil {
 
 		this.args = [];
 
-		this.#parse();
+		this.parse();
 	}
 
 	/**
 	 * Parses the message content to extract command, alias, prefix, and arguments.
 	 * It also checks if the message mentions the bot.
 	 */
-	#parse() {
+	private parse() {
 		if (this.message.content.trim().startsWith(`<@${this.client.user.id}>`)) this.message.content = this.message.content.replace(`<@${this.client.user.id}>`, '').trimStart();
 
 		const [command, ...args] = this.message.content.split(this.client.handler.message.seperator || ' ');
