@@ -5,6 +5,7 @@ export * from './client/XernerxShardClient.js';
 export * from './client/XernerxClient.js';
 
 // Builders
+export * from '@xernerx/extension-builder';
 export * from './build/BaseBuilder.js';
 export * from './build/EventBuilder.js';
 export * from './build/MessageCommandBuilder.js';

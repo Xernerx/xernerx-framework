@@ -3,6 +3,7 @@
 import { Client, ClientOptions, Collection, RESTGetAPISKUsResult } from 'discord.js';
 import { ClusterClient, DjsDiscordClient, getInfo } from 'discord-hybrid-sharding';
 
+import { ExtensionBuilder } from '@xernerx/extension-builder';
 import { CommandHandler } from '../handler/CommandHandler.js';
 import { ContextCommandBuilder } from '../build/ContextCommandBuilder.js';
 import { ContextCommandHandlerOptions } from '../interfaces/ContextCommandHandlerOptions.js';
@@ -92,7 +93,7 @@ export class XernerxClient extends Client {
 	/** Collection of registered inhibitor builders keyed by inhibitor ID. */
 	declare public readonly inhibitors: Collection<string, InhibitorBuilder>;
 	/** Collection of registered framework extensions keyed by extension ID. */
-	declare public readonly extensions: Collection<string, any>;
+	declare public readonly extensions: Collection<string, ExtensionBuilder>;
 	/** In-memory TTL cache storing user engagement states (`voted`, `reviewed`, `tipped`). */
 	declare public userEngagementCache: Map<string, UserEngagementData>;
 	/** Optional `@xernerx/hooks` client attached to this bot instance. */

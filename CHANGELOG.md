@@ -1,5 +1,11 @@
 <!-- @format -->
 
+## 1.1.1
+
+### Patch Changes
+
+- Use `@xernerx/extension-builder` from npm and integrate `ExtensionBuilder` handling.
+
 ## 1.1.0
 
 ### Minor Changes

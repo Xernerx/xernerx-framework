@@ -1,5 +1,6 @@
 /** @format */
 
+import { ExtensionBuilder } from '@xernerx/extension-builder';
 import { BaseHandler } from './BaseHandler.js';
 import { XernerxClient } from '../client/XernerxClient.js';
 import { XernerxSuccess } from '../tools/XernerxSuccess.js';
@@ -7,8 +8,8 @@ import sharpyy from 'sharpyy';
 import { XernerxError } from '../tools/XernerxError.js';
 
 /**
- * Handler responsible for registering framework extensions (such as `@xernerx/commands`, `@xernerx/stats`, and `@xernerx/hooks`)
- * onto `XernerxClient`.
+ * Handler responsible for registering framework extensions (built with `@xernerx/extension-builder`,
+ * such as `@xernerx/commands`, `@xernerx/stats`, and `@xernerx/hooks`) onto `XernerxClient`.
  */
 export class ExtensionHandler extends BaseHandler {
 	/**
@@ -26,12 +27,14 @@ export class ExtensionHandler extends BaseHandler {
 	 * @param builder - The extension instance to validate and attach to `client.extensions`.
 	 * @returns A promise that resolves when the extension is registered, or logs an error if invalid.
 	 */
-	protected override async loadBuilder(builder: any): Promise<any> {
-		if (!builder.id || builder.filetype !== 'XernerxExtension') return new XernerxError(`${builder.name || builder.constructor.name} is not a valid extension.`);
+	protected override async loadBuilder(builder: ExtensionBuilder | any): Promise<any> {
+		if (!builder || (!(builder instanceof ExtensionBuilder) && (!builder.id || builder.filetype !== 'XernerxExtension'))) {
+			return new XernerxError(`${builder?.name || builder?.constructor?.name || 'Unknown'} is not a valid extension.`);
+		}
 
 		builder.client = this.client;
 
-		this.client.extensions.set(builder.id, builder);
+		this.client.extensions.set(builder.id || builder.name, builder);
 	}
 
 	/**
@@ -40,7 +43,7 @@ export class ExtensionHandler extends BaseHandler {
 	 * @param builder - The extension instance to load.
 	 * @returns A promise that resolves when the extension has been loaded.
 	 */
-	async loadExtension(builder: any) {
+	async loadExtension(builder: ExtensionBuilder | any) {
 		return await this.loadBuilder(builder);
 	}
 
@@ -50,7 +53,7 @@ export class ExtensionHandler extends BaseHandler {
 	 * @param builders - One or more extension instances to load onto the client.
 	 * @returns A promise that resolves when all extensions have been loaded.
 	 */
-	async loadExtensions(...builders: any) {
+	async loadExtensions(...builders: Array<ExtensionBuilder | any>) {
 		for (const builder of builders) {
 			await this.loadExtension(builder);
 		}

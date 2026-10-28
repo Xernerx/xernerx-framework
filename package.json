@@ -3,7 +3,7 @@
 	"publishConfig": {
 		"access": "public"
 	},
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"type": "module",
 	"main": "./dist/main.cjs",
 	"module": "./dist/main.js",
@@ -38,6 +38,7 @@
 	"license": "MIT",
 	"description": "",
 	"dependencies": {
+		"@xernerx/extension-builder": "^0.1.0",
 		"@xernerx/terminal": "^1.1.13",
 		"discord-hybrid-sharding": "^3.0.0",
 		"sharpyy": "1.1.0",
