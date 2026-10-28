@@ -4,10 +4,20 @@ import { ChatInputCommandInteraction } from 'discord.js';
 import { SlashCommandBuilder } from '../build/SlashCommandBuilder.js';
 import { SlashCommandOption } from '../main.js';
 
+/**
+ * Helper class that extracts and formats slash command options, subcommands, and subcommand groups
+ * from a `ChatInputCommandInteraction`.
+ */
 export class InteractionArguments {
 	declare private readonly interaction: ChatInputCommandInteraction;
 	declare private readonly command: SlashCommandBuilder;
 
+	/**
+	 * Constructs a new `InteractionArguments` parser for an interaction and command.
+	 *
+	 * @param interaction - The Discord chat input command interaction.
+	 * @param command - The `SlashCommandBuilder` instance being executed.
+	 */
 	constructor(interaction: ChatInputCommandInteraction, command: SlashCommandBuilder) {
 		this.interaction = interaction;
 
@@ -53,6 +63,12 @@ export class InteractionArguments {
 		return options;
 	}
 
+	/**
+	 * Populates the target `options` record with resolved values and entities from the interaction options.
+	 *
+	 * @param input - Array of option definitions configured on the command or subcommand.
+	 * @param options - Mutable record where formatted option objects are stored by name.
+	 */
 	formatOptions(input: any, options: any) {
 		for (const option of input) {
 			const o = this.interaction.options.get(option.name);

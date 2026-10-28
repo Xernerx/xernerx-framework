@@ -15,7 +15,7 @@ import { MessageCommandBuilder } from '../build/MessageCommandBuilder.js';
 import { MessageCommandHandlerOptions } from '../interfaces/MessageCommandHandlerOptions.js';
 import { SlashCommandBuilder } from '../build/SlashCommandBuilder.js';
 import { SlashCommandHandlerOptions } from '../interfaces/SlashCommandHandlerOptions.js';
-import { XernerxClientOptions } from '../interfaces/XernerxClientOptions.js';
+import { UserEngagementData, XernerxClientOptions } from '../interfaces/XernerxClientOptions.js';
 import { XernerxClientStats } from '../interfaces/XernerxClientStats.js';
 import { XernerxError } from '../tools/XernerxError.js';
 import { XernerxInfo } from '../tools/XernerxInfo.js';
@@ -25,38 +25,97 @@ import { XernerxSuccess } from '../tools/XernerxSuccess.js';
 import sharpyy from 'sharpyy';
 import z from 'zod';
 
+/**
+ * Core Discord client for the Xernerx framework, extending `discord.js`'s `Client`
+ * with built-in handlers for commands, events, inhibitors, extensions, sharding,
+ * monetization, and user engagement caching.
+ */
 export class XernerxClient extends Client {
 	// Config
+	/** The Discord bot authentication token. */
 	declare public readonly token: string;
+	/** Whether the client is running in a sharded environment. */
 	declare public readonly sharded: boolean;
+	/** The current shard ID, or `null` if unsharded. */
 	declare public shardId: number | null;
+	/** Validated client configuration settings. */
 	declare public readonly settings: XernerxClientOptions;
+	/** Premium configuration options for owners, consumable entitlements, and startup synchronization. */
 	declare public readonly premium: {
+		/** Whether to automatically grant test entitlements to configured bot owners. */
 		owners?: boolean;
+		/** Whether to automatically consume consumable entitlements during synchronization. */
 		consume?: boolean;
+		/** Whether to synchronize owner entitlements when the client becomes ready. */
 		synchronize?: boolean;
 	};
 
 	// Setup
-	declare public readonly monitisation: { skus: RESTGetAPISKUsResult };
+	/** Cached monetization data including application SKUs. */
+	declare public readonly monitisation: {
+		/** List of application SKUs fetched from Discord. */
+		skus: RESTGetAPISKUsResult;
+	};
+	/** Live statistics for the client and its shards. */
 	declare public readonly stats: XernerxClientStats;
+	/** The `discord-hybrid-sharding` cluster client instance when sharded, or `null`. */
 	declare public readonly cluster: ClusterClient | null;
-	declare public readonly cache: { messages: Collection<string, string>; slash: Collection<string, string> };
-	declare public readonly handler: { message: MessageCommandHandlerOptions; slash: SlashCommandHandlerOptions; context: ContextCommandHandlerOptions };
+	/** Internal message and slash command response caches. */
+	declare public readonly cache: {
+		/** Maps trigger message IDs to bot response message IDs for edit/delete handling. */
+		messages: Collection<string, string>;
+		/** Cache collection for slash command interactions. */
+		slash: Collection<string, string>;
+	};
+	/** Configuration options registered for message, slash, and context command handlers. */
+	declare public readonly handler: {
+		/** Message command handler configuration. */
+		message: MessageCommandHandlerOptions;
+		/** Slash command handler configuration. */
+		slash: SlashCommandHandlerOptions;
+		/** Context menu command handler configuration. */
+		context: ContextCommandHandlerOptions;
+	};
 
 	// Collections
+	/** Collections of registered message, slash, and context menu commands. */
 	declare public readonly commands: {
+		/** Registered message commands keyed by command ID. */
 		message: Collection<string, MessageCommandBuilder>;
+		/** Registered slash commands keyed by command ID. */
 		slash: Collection<string, SlashCommandBuilder>;
+		/** Registered context menu commands keyed by command ID. */
 		context: Collection<string, ContextCommandBuilder>;
 	};
+	/** Collection of registered event builders keyed by event ID. */
 	declare public readonly events: Collection<string, EventBuilder>;
+	/** Collection of registered inhibitor builders keyed by inhibitor ID. */
 	declare public readonly inhibitors: Collection<string, InhibitorBuilder>;
+	/** Collection of registered framework extensions keyed by extension ID. */
 	declare public readonly extensions: Collection<string, any>;
+	/** In-memory TTL cache storing user engagement states (`voted`, `reviewed`, `tipped`). */
+	declare public userEngagementCache: Map<string, UserEngagementData>;
+	/** Optional `@xernerx/hooks` client attached to this bot instance. */
+	declare public hooks?: any;
 
 	// Handlers
-	declare public readonly modules: { eventHandler: EventHandler; commandHandler: CommandHandler; inhibitorHandler: InhibitorHandler; extensionHandler: ExtensionHandler };
+	/** Core module handlers for events, commands, inhibitors, and extensions. */
+	declare public readonly modules: {
+		/** Handler responsible for loading and binding events. */
+		eventHandler: EventHandler;
+		/** Handler responsible for loading message, slash, and context commands. */
+		commandHandler: CommandHandler;
+		/** Handler responsible for loading command and interaction inhibitors. */
+		inhibitorHandler: InhibitorHandler;
+		/** Handler responsible for loading framework extensions. */
+		extensionHandler: ExtensionHandler;
+	};
 
+	/**
+	 * Creates a new `XernerxClient` instance.
+	 *
+	 * @param options - Discord.js `ClientOptions` combined with `XernerxClientOptions`.
+	 */
 	constructor(options: ClientOptions & XernerxClientOptions) {
 		try {
 			options.shards = getInfo().SHARD_LIST;
@@ -129,6 +188,8 @@ export class XernerxClient extends Client {
 		this.inhibitors = new Collection();
 
 		this.extensions = new Collection();
+
+		this.userEngagementCache = new Map();
 
 		// Modules
 
@@ -203,5 +264,107 @@ export class XernerxClient extends Client {
 		});
 
 		return await this.login(this.token).catch((error) => new XernerxError(error.message, 1));
+	}
+
+	/**
+	 * Resolves and caches a user's engagement state (`voted`, `reviewed`, `tipped`) for this bot.
+	 * Uses `@xernerx/hooks` if loaded, otherwise checks the in-memory TTL cache before falling back to the Xernerx API.
+	 *
+	 * @param userId - The Discord user ID whose engagement data should be resolved.
+	 * @param force - Whether to bypass the in-memory TTL cache and fetch fresh engagement data.
+	 * @returns A promise that resolves to the user's engagement state.
+	 */
+	public async resolveUserEngagement(userId: string, force = false): Promise<UserEngagementData> {
+		const botId = this.user?.id || '';
+
+		if (this.hooks && typeof this.hooks.getUserEngagement === 'function') {
+			return await this.hooks.getUserEngagement(userId, botId || this.hooks.botId, force);
+		}
+
+		const compositeKey = botId ? `${botId}:${userId}` : userId;
+		const cached = this.userEngagementCache.get(compositeKey) || this.userEngagementCache.get(userId);
+		const now = Date.now();
+		const ttlMs = 15 * 60 * 1000;
+
+		if (cached) {
+			if (cached.voted && cached.nextVoteAt) {
+				const expiry = Date.parse(cached.nextVoteAt);
+				if (!Number.isNaN(expiry) && now >= expiry) {
+					cached.voted = false;
+				}
+			}
+
+			if (!force && now - cached.updatedAt < ttlMs) {
+				return cached;
+			}
+		}
+
+		if (!botId) {
+			const fallback: UserEngagementData = cached ?? {
+				userId,
+				botId: '',
+				voted: false,
+				lastVotedAt: null,
+				nextVoteAt: null,
+				reviewed: false,
+				rating: null,
+				tipped: 0,
+				updatedAt: now,
+			};
+			return fallback;
+		}
+
+		const apiUrl = (
+			typeof process !== 'undefined' && process.env?.API_URL
+				? process.env.API_URL
+				: typeof process !== 'undefined' && process.env?.ENVIRONMENT?.toUpperCase() === 'CANARY'
+					? 'https://api.canary.xernerx.com'
+					: 'https://api.xernerx.com'
+		).replace(/\/$/, '');
+
+		try {
+			const response = await fetch(`${apiUrl}/v1/bots/${encodeURIComponent(botId)}/users/${encodeURIComponent(userId)}`, {
+				method: 'GET',
+				signal: typeof AbortSignal !== 'undefined' && 'timeout' in AbortSignal ? AbortSignal.timeout(3000) : undefined,
+			});
+
+			if (response.ok) {
+				const body: any = await response.json().catch(() => null);
+				if (body && typeof body === 'object') {
+					const nextState: UserEngagementData = {
+						userId,
+						botId,
+						voted: Boolean(body.voted),
+						lastVotedAt: typeof body.lastVotedAt === 'string' ? body.lastVotedAt : null,
+						nextVoteAt: typeof body.nextVoteAt === 'string' ? body.nextVoteAt : null,
+						reviewed: Boolean(body.reviewed),
+						rating: typeof body.rating === 'number' ? body.rating : null,
+						tipped: typeof body.tipped === 'number' && Number.isFinite(body.tipped) ? body.tipped : 0,
+						updatedAt: Date.now(),
+					};
+					this.userEngagementCache.set(compositeKey, nextState);
+					this.userEngagementCache.set(userId, nextState);
+					return nextState;
+				}
+			}
+		} catch {}
+
+		const fallbackState: UserEngagementData = cached
+			? { ...cached, updatedAt: Date.now() }
+			: {
+					userId,
+					botId,
+					voted: false,
+					lastVotedAt: null,
+					nextVoteAt: null,
+					reviewed: false,
+					rating: null,
+					tipped: 0,
+					updatedAt: Date.now(),
+				};
+
+		this.userEngagementCache.set(compositeKey, fallbackState);
+		this.userEngagementCache.set(userId, fallbackState);
+		return fallbackState;
 	}
 }

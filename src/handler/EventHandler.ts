@@ -8,7 +8,15 @@ import { XernerxMessageEvent } from '../events/XernerxMessage.js';
 import { XernerxSuccess } from '../tools/XernerxSuccess.js';
 import sharpyy from 'sharpyy';
 
+/**
+ * Handler responsible for loading custom and built-in event builders onto the client.
+ */
 export class EventHandler extends BaseHandler {
+	/**
+	 * Constructs a new `EventHandler` instance and registers built-in process and client ready events.
+	 *
+	 * @param client - The `XernerxClient` instance to register events onto.
+	 */
 	constructor(client: XernerxClient) {
 		super(client);
 

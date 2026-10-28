@@ -28,31 +28,97 @@ import { BaseBuilder } from './BaseBuilder.js';
 import { XernerxWarn } from '../tools/XernerxWarn.js';
 import { z } from 'zod';
 
+/**
+ * Builder class for defining Discord chat input (slash) commands with built-in validation,
+ * permissions, localization, subcommands, and engagement/monetization requirements.
+ */
 export class SlashCommandBuilder extends BaseBuilder {
 	// Discord
+	/** The name of the slash command. */
 	declare public readonly name: string;
+	/** The description of the slash command. */
 	declare public readonly description: string;
+	/** Allowed interaction contexts for the slash command. */
 	declare public readonly integration: RestOrArray<InteractionContextType>;
+	/** The underlying `discord.js` `SlashCommandBuilder` instance used for deployment. */
 	declare public readonly data: DiscordSlashCommandBuilder;
+	/** Array of top-level options configured for this slash command. */
 	declare public readonly options: Array<SlashCommandBuilderOption>;
+	/** Array of subcommands configured for this slash command. */
 	declare public readonly subcommands: Array<SlashCommandBuilderSubcommand>;
+	/** Array of subcommand groups configured for this slash command. */
 	declare public readonly groups: Array<SlashCommandBuilderGroup>;
 
 	// Xernerx
+	/** Whether this command requires an active Discord premium entitlement. */
 	declare public readonly premium?: boolean;
+	/** Whether this command requires the user to have an active vote for the bot. */
+	declare public readonly voted?: boolean;
+	/** Whether this command requires the user to have left a review for the bot. */
+	declare public readonly reviewed?: boolean;
+	/** Whether this command requires the user to have tipped the bot (or a minimum credit threshold). */
+	declare public readonly tipped?: boolean | number;
+	/** Whether the interaction reply should be automatically deferred before execution. */
 	declare public readonly defer?: boolean;
-	declare public readonly deploy?: { global?: boolean; guilds?: Array<string> | string };
+	/** Deployment configuration specifying global or guild-scoped registration. */
+	declare public readonly deploy?: {
+		/** Whether to deploy the command globally. */
+		global?: boolean;
+		/** Specific guild ID(s) to deploy the command to when not global. */
+		guilds?: Array<string> | string;
+	};
+	/** Extended information or help text about the command. */
 	declare public readonly info?: string;
+	/** Example usage string for the command. */
 	declare public readonly usage?: string;
+	/** Category name for grouping the command in help menus. */
 	declare public readonly category?: string;
+	/** Cooldown duration in milliseconds (or seconds depending on consumer) for the command. */
 	declare public readonly cooldown?: number;
-	declare public readonly permissions: { client: Permissions | number | bigint | null; user: Permissions | number | bigint | null };
-	declare public readonly strict?: { owner?: boolean; users?: Array<string>; channels?: Array<string>; guilds?: Array<string>; types?: ChannelType };
-	declare public readonly ignore?: { owner?: boolean; users?: Array<string>; channels?: Array<string>; guilds?: Array<string>; types?: ChannelType };
+	/** Required permissions for the bot client and the invoking user. */
+	declare public readonly permissions: {
+		/** Permissions required by the bot client. */
+		client: Permissions | number | bigint | null;
+		/** Permissions required by the invoking user. */
+		user: Permissions | number | bigint | null;
+	};
+	/** Strict whitelist rules restricting where and by whom the command can be executed. */
+	declare public readonly strict?: {
+		/** Whether only bot owners can execute this command. */
+		owner?: boolean;
+		/** Whitelisted user IDs allowed to execute this command. */
+		users?: Array<string>;
+		/** Whitelisted channel IDs where this command can be executed. */
+		channels?: Array<string>;
+		/** Whitelisted guild IDs where this command can be executed. */
+		guilds?: Array<string>;
+		/** Restricted channel type where this command can be executed. */
+		types?: ChannelType;
+	};
+	/** Blacklist rules specifying users, channels, or guilds ignored by this command. */
+	declare public readonly ignore?: {
+		/** Whether bot owners are ignored by this command. */
+		owner?: boolean;
+		/** User IDs ignored by this command. */
+		users?: Array<string>;
+		/** Channel IDs ignored by this command. */
+		channels?: Array<string>;
+		/** Guild IDs ignored by this command. */
+		guilds?: Array<string>;
+		/** Channel type ignored by this command. */
+		types?: ChannelType;
+	};
 
 	// Static
+	/** Static discriminator identifying this builder as a Xernerx slash command. */
 	declare public readonly filetype: 'XernerxSlashCommand';
 
+	/**
+	 * Constructs a new `SlashCommandBuilder` instance.
+	 *
+	 * @param id - A unique identifier for the slash command.
+	 * @param options - Configuration options defining the slash command structure and requirements.
+	 */
 	constructor(id: string, options: SlashCommandBuilderOptions) {
 		super(id, options);
 
@@ -71,6 +137,9 @@ export class SlashCommandBuilder extends BaseBuilder {
 
 				// Xernerx
 				premium: z.boolean().default(false),
+				voted: z.boolean().default(false),
+				reviewed: z.boolean().default(false),
+				tipped: z.union([z.boolean(), z.number().min(0)]).default(false),
 				defer: z.boolean().default(false),
 				deploy: z.object({ global: z.boolean().default(true), guilds: z.string().or(z.array(z.string())).default([]) }).optional(),
 				info: z.string().optional(),
@@ -123,6 +192,12 @@ export class SlashCommandBuilder extends BaseBuilder {
 		this.cooldown = options.cooldown;
 
 		this.premium = options.premium || false;
+
+		this.voted = options.voted || false;
+
+		this.reviewed = options.reviewed || false;
+
+		this.tipped = options.tipped || false;
 
 		this.defer = options.defer;
 
@@ -209,8 +284,20 @@ export class SlashCommandBuilder extends BaseBuilder {
 		new XernerxWarn(`${this.id} has no exec function, command will not respond.`);
 	}
 
+	/**
+	 * Handles errors thrown during the execution of the slash command.
+	 *
+	 * @param args - The error context including the interaction, parsed options, command instance, and thrown error.
+	 * @returns A promise that resolves when error handling is complete.
+	 */
 	public async error(args: SlashCommandError): Promise<void | any> {}
 
+	/**
+	 * Adds command arguments (options) to a Discord slash command or subcommand builder.
+	 *
+	 * @param command - The target Discord slash command or subcommand builder.
+	 * @param args - Array of option definitions to attach to the command.
+	 */
 	private addArguments(command: DiscordSlashCommandBuilder | SlashCommandSubcommandBuilder, args: Array<SlashCommandBuilderOption>) {
 		for (const argument of args) {
 			let slashCommandArgumentType: string = `${argument.type.charAt(0).toUpperCase()}${argument.type.slice(1).toLowerCase()}`;
@@ -246,6 +333,12 @@ export class SlashCommandBuilder extends BaseBuilder {
 		}
 	}
 
+	/**
+	 * Adds subcommands to a Discord slash command or subcommand group builder.
+	 *
+	 * @param method - The target Discord slash command or subcommand group builder.
+	 * @param subcommands - Array of subcommand definitions to attach.
+	 */
 	private addSubcommands(method: DiscordSlashCommandBuilder | SlashCommandSubcommandGroupBuilder, subcommands: Array<SlashCommandBuilderSubcommand>) {
 		for (const subcommand of subcommands) {
 			let sub = new SlashCommandSubcommandBuilder().setName(subcommand.name).setDescription(subcommand.description);
@@ -282,6 +375,9 @@ export class SlashCommandBuilder extends BaseBuilder {
 	}
 }
 
+/** PascalCase slash command option type names used to dynamically invoke `add<Type>Option` on `discord.js` builders. */
 type UpperCasedSlashCommandArgumentOptions = 'Attachment' | 'Boolean' | 'Channel' | 'Integer' | 'Mentionable' | 'Number' | 'Role' | 'String' | 'User';
+/** Union of all supported `discord.js` slash command option builders. */
 type SlashCommandOption = SlashCommandOptionChoices | SlashCommandBooleanOption | SlashCommandUserOption | SlashCommandChannelOption | SlashCommandRoleOption | SlashCommandMentionableOption;
+/** Union of `discord.js` slash command option builders that support choices. */
 type SlashCommandOptionChoices = SlashCommandStringOption | SlashCommandNumberOption | SlashCommandIntegerOption;

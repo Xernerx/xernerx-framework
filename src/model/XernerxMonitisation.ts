@@ -3,9 +3,18 @@
 import { MonetizationAPI } from '@discordjs/core';
 import { Client, RequestData, RESTGetAPIEntitlementsQuery } from 'discord.js';
 
+/**
+ * Wrapper around `@discordjs/core`'s `MonetizationAPI` bound to the current application client,
+ * providing methods to query SKUs and manage or consume user/guild entitlements.
+ */
 export class XernerxMonitisation extends MonetizationAPI {
 	declare private readonly client: Client<true>;
 
+	/**
+	 * Constructs a new `XernerxMonitisation` API wrapper.
+	 *
+	 * @param client - The authenticated Discord `Client` instance.
+	 */
 	constructor(client: Client<true>) {
 		super(client.rest);
 

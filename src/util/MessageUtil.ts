@@ -5,11 +5,24 @@ import { Client, Collection, Message, MessageCreateOptions, MessageEditOptions, 
 import { BaseUtil } from './BaseUtil.js';
 import { XernerxClient } from '../client/XernerxClient.js';
 
+/**
+ * Utility class attached to `message.util` providing message command parsing, argument extraction,
+ * and automatic response edit/reply caching when `handleEdits` is enabled.
+ */
 export class MessageUtil extends BaseUtil {
+	/** The Discord `Message` bound to this utility instance. */
 	declare public readonly message: Message;
+	/** Cache collection mapping user command message IDs to bot response message IDs. */
 	declare public readonly cache: Collection<string, string>;
+	/** Array of command arguments parsed from the message content. */
 	declare public args: string[];
 
+	/**
+	 * Constructs a new `MessageUtil` instance and parses the message content for command triggers.
+	 *
+	 * @param client - The authenticated `XernerxClient` instance.
+	 * @param message - The incoming Discord `Message`.
+	 */
 	constructor(client: XernerxClient & Client<true>, message: Message) {
 		super(client, message);
 

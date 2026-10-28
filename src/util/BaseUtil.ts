@@ -4,16 +4,32 @@ import { Client, Interaction, Message, MessagePayload, Webhook, WebhookMessageCr
 
 import { XernerxClient } from '../client/XernerxClient.js';
 
+/**
+ * Base utility class attached to interactions and messages, providing shared helpers such as webhook messaging.
+ */
 export class BaseUtil {
+	/** The authenticated `XernerxClient` instance. */
 	declare public readonly client: XernerxClient & Client<true>;
+	/** Parsed command metadata extracted from a message (command name, alias, mention status, and prefix). */
 	declare public readonly parsed: {
+		/** Resolved command name, or `null` if none matched. */
 		command: string | null;
+		/** Resolved command alias or name, or `null` if none matched. */
 		alias: string | null;
+		/** Whether the message mentioned the bot user. */
 		mention: boolean | null;
+		/** Resolved command prefix used to trigger the command, or `null`. */
 		prefix: string | null;
 	};
+	/** The underlying Discord `Interaction` or `Message` instance. */
 	declare public interaction: Interaction | Message;
 
+	/**
+	 * Constructs a new `BaseUtil` instance.
+	 *
+	 * @param client - The authenticated `XernerxClient` instance.
+	 * @param interaction - The Discord `Interaction` or `Message` being handled.
+	 */
 	constructor(client: XernerxClient & Client<true>, interaction: Interaction | Message) {
 		this.client = client;
 

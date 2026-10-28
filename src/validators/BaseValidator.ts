@@ -7,12 +7,27 @@ import { MessageCommandBuilder } from '../build/MessageCommandBuilder.js';
 import { SlashCommandBuilder } from '../build/SlashCommandBuilder.js';
 import { XernerxClient } from '../client/XernerxClient.js';
 
+/**
+ * Base validator class that evaluates command requirements (global/guild availability,
+ * Discord premium entitlements, votes, reviews, and tips) before command execution
+ * and emits `commandBlock` events when a requirement is not met.
+ */
 export class BaseValidator {
+	/** The `XernerxClient` instance. */
 	declare public readonly client: XernerxClient;
+	/** The Discord `Interaction` or `Message` triggering the command. */
 	declare public readonly interaction: Interaction | Message;
+	/** The command builder instance being validated. */
 	declare public readonly command: SlashCommandBuilder | MessageCommandBuilder | ContextCommandBuilder;
+	/** Whether all evaluated validation checks have been satisfied so far. */
 	declare public satisified: boolean;
 
+	/**
+	 * Constructs a new `BaseValidator` instance.
+	 *
+	 * @param interaction - The Discord `Interaction` or `Message` triggering the command.
+	 * @param command - The command builder instance to validate against.
+	 */
 	constructor(interaction: Interaction | Message, command: SlashCommandBuilder | MessageCommandBuilder | ContextCommandBuilder) {
 		this.client = interaction.client;
 
@@ -36,6 +51,66 @@ export class BaseValidator {
 
 		if (!premium) {
 			this.emit({ type: 'premiumCommand', message: 'This command requires a premium subscription.', data: [] });
+
+			this.satisified = false;
+		}
+	}
+
+	/**
+	 * Checks if the command requires the user to have an active vote for the bot.
+	 *
+	 * @returns A promise that resolves when the vote check is complete.
+	 */
+	public async voted() {
+		if (!this.command.voted) return;
+
+		const user = (this.interaction as Interaction).user || (this.interaction as Message).user;
+
+		if (!user?.voted) {
+			this.emit({ type: 'votedCommand', message: 'This command requires you to vote for the bot first.', data: [] });
+
+			this.satisified = false;
+		}
+	}
+
+	/**
+	 * Checks if the command requires the user to have reviewed the bot.
+	 *
+	 * @returns A promise that resolves when the review check is complete.
+	 */
+	public async reviewed() {
+		if (!this.command.reviewed) return;
+
+		const user = (this.interaction as Interaction).user || (this.interaction as Message).user;
+
+		if (!user?.reviewed) {
+			this.emit({ type: 'reviewedCommand', message: 'This command requires you to leave a review for the bot first.', data: [] });
+
+			this.satisified = false;
+		}
+	}
+
+	/**
+	 * Checks if the command requires the user to have tipped credits to the bot.
+	 *
+	 * @returns A promise that resolves when the tip check is complete.
+	 */
+	public async tipped() {
+		if (!this.command.tipped) return;
+
+		const user = (this.interaction as Interaction).user || (this.interaction as Message).user;
+		const tippedAmount = typeof user?.tipped === 'number' ? user.tipped : 0;
+		const requiredAmount = typeof this.command.tipped === 'number' ? this.command.tipped : 1;
+
+		if (tippedAmount < requiredAmount) {
+			this.emit({
+				type: 'tippedCommand',
+				message:
+					typeof this.command.tipped === 'number'
+						? `This command requires you to have tipped at least ${this.command.tipped} credits to the bot.`
+						: 'This command requires you to have tipped the bot.',
+				data: [String(requiredAmount)],
+			});
 
 			this.satisified = false;
 		}
@@ -77,6 +152,12 @@ export class BaseValidator {
 		await this.global();
 
 		await this.premium();
+
+		await this.voted();
+
+		await this.reviewed();
+
+		await this.tipped();
 
 		return this.satisified;
 	}

@@ -10,16 +10,34 @@ import { XernerxSuccess } from '../tools/XernerxSuccess.js';
 import fs from 'fs';
 import sharpyy from 'sharpyy';
 
+/**
+ * Cluster and shard manager for scaling a `XernerxClient` across multiple processes
+ * using `discord-hybrid-sharding`.
+ */
 export class XernerxShardClient extends ClusterManager {
+	/** Set of currently online and ready shard clusters. */
 	declare public readonly onlineShards: Set<Cluster>;
+	/** Aggregated statistics across all managed shards. */
 	declare public readonly stats: {
+		/** Timestamp (in milliseconds) when the shard manager started. */
 		onlineSince: number | null;
+		/** Total number of guilds across all shards. */
 		guildCount: number | null;
+		/** Total number of users across all shards. */
 		userCount: number | null;
+		/** Total number of shards managed by the cluster manager. */
 		shardCount: number | null;
+		/** Total number of votes recorded for the bot. */
 		voteCount: number | null;
+		/** Array of individual shard statistics. */
 		shards: [] | null;
 	};
+
+	/**
+	 * Creates a new `XernerxShardClient` instance and spawns all shard clusters.
+	 *
+	 * @param options - `discord-hybrid-sharding` cluster manager options combined with `XernerxShardClientOptions`.
+	 */
 	constructor(options: ClusterManagerOptions & XernerxShardClientOptions) {
 		new XernerxInitial('ShardClient');
 
@@ -67,6 +85,11 @@ export class XernerxShardClient extends ClusterManager {
 		this.spawn({ timeout: -1 });
 	}
 
+	/**
+	 * Starts periodic aggregation of statistics across all online shard clusters.
+	 *
+	 * @returns A promise that resolves once the initial shard readiness summary has been logged.
+	 */
 	private async update() {
 		await new Promise((resolve) => setTimeout(resolve, 1000));
 

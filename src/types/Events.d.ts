@@ -18,5 +18,12 @@ declare module 'discord.js' {
 		commandStart: [interaction: Interaction | Message, args: any, command: SlashCommandBuilder | MessageCommandBuilder | ContextCommandBuilder];
 		commandFinish: [interaction: Interaction | Message, args: any, command: SlashCommandBuilder | MessageCommandBuilder | ContextCommandBuilder];
 		commandDelete: [interaction: Interaction | Message, error: Error];
+		vote: [payload: any, user?: any];
+		review: [payload: any, user?: any];
+		tip: [payload: any, user?: any];
+		release: [payload: any, user?: any];
+		stat: [payload: any, user?: any];
+		test: [payload: any, user?: any];
+		webhook: [payload: any, user?: any];
 	}
 }

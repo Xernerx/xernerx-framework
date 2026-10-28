@@ -18,11 +18,24 @@ import { BaseUtil } from './BaseUtil.js';
 import { XernerxClient } from '../client/XernerxClient.js';
 import { XernerxError } from '../tools/XernerxError.js';
 
+/**
+ * Utility class attached to `interaction.util` providing streamlined `send`, `reply`, and `webhook` methods
+ * with automatic deferral/reply detection and Components V2 flag support.
+ */
 export class InteractionUtil extends BaseUtil {
+	/** The repliable Discord interaction bound to this utility instance. */
 	declare public readonly interaction: RepliableInteraction;
+	/** Cache collection storing slash command response mappings. */
 	declare public readonly cache: Collection<string, string>;
+	/** Parsed string arguments associated with the interaction, if any. */
 	declare public args: string[];
 
+	/**
+	 * Constructs a new `InteractionUtil` instance.
+	 *
+	 * @param client - The authenticated `XernerxClient` instance.
+	 * @param interaction - The incoming Discord interaction.
+	 */
 	constructor(client: XernerxClient & Client<true>, interaction: Interaction) {
 		super(client, interaction);
 

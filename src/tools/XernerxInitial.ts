@@ -6,7 +6,15 @@ import path from 'path';
 import pkg from '../../package.json' with { type: 'json' };
 import { XernerxInfo } from './XernerxInfo.js';
 
+/**
+ * Terminal initialization helper that displays the Xernerx banner and checks for newer framework versions.
+ */
 export class XernerxInitial extends XernerxBase {
+	/**
+	 * Clears the terminal, renders the `XERNERX` banner, and initiates an asynchronous version check.
+	 *
+	 * @param type - Whether the process is starting a standalone `'Client'` or a `'ShardClient'`.
+	 */
 	constructor(type: 'Client' | 'ShardClient') {
 		super();
 
@@ -17,6 +25,11 @@ export class XernerxInitial extends XernerxBase {
 		this.version();
 	}
 
+	/**
+	 * Checks the official Xernerx repository for newer stable or beta releases and logs an update notice if available.
+	 *
+	 * @returns A promise that resolves to an info log instance if an update is available, or `undefined`.
+	 */
 	async version() {
 		const latest = (await fetch('https://api.github.com/repos/Xernerx/docs/contents/packages/xernerx')
 			.then((res) => res.json())

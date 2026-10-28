@@ -12,12 +12,19 @@ import { XernerxInfo } from '../tools/XernerxInfo.js';
 import { XernerxUser } from '../model/XernerxUser.js';
 import { ContextCommandBuilder } from '../build/ContextCommandBuilder.js';
 
+/**
+ * Built-in `clientReady` event listener that triggers cluster readiness, synchronizes
+ * owner premium entitlements, and deploys slash and context menu commands to Discord.
+ */
 export class XernerxClientReadyEvent extends EventBuilder {
 	declare private readonly commands: {
 		global: Array<SlashCommandBuilder | ContextCommandBuilder>;
 		local: Array<SlashCommandBuilder | ContextCommandBuilder>;
 	};
 
+	/**
+	 * Constructs the `XernerxClientReadyEvent` listener.
+	 */
 	constructor() {
 		super('XernerxClientReadyEvent', {
 			name: 'clientReady',
@@ -31,6 +38,12 @@ export class XernerxClientReadyEvent extends EventBuilder {
 		};
 	}
 
+	/**
+	 * Executes when the Discord client becomes ready, synchronizing entitlements and partitioning commands for deployment.
+	 *
+	 * @param client - The ready `XernerxClient` instance.
+	 * @returns A promise that resolves when startup tasks have completed.
+	 */
 	override async run(client: XernerxClient) {
 		client.cluster?.triggerReady();
 
@@ -42,7 +55,8 @@ export class XernerxClientReadyEvent extends EventBuilder {
 			if (client.premium?.synchronize) new XernerxInfo(`Synchronizing entitlements for premium owners...`);
 
 			for (const owner of client.settings.owners) {
-				const user = await client.users.fetch(owner);
+				const user = await client.users.fetch(owner).catch(() => null);
+				if (!user) continue;
 
 				new XernerxUser(client as Client<true>, user).synchronize();
 
@@ -70,6 +84,12 @@ export class XernerxClientReadyEvent extends EventBuilder {
 		}
 	}
 
+	/**
+	 * Deploys global and guild-scoped application commands to the Discord REST API.
+	 *
+	 * @param client - The `XernerxClient` instance whose application commands are being deployed.
+	 * @returns A promise that resolves when command deployment completes.
+	 */
 	async put(client: XernerxClient) {
 		const rest = new REST({ version: GatewayVersion }).setToken(client.token);
 

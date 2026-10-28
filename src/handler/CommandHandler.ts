@@ -17,7 +17,16 @@ import { XernerxWarn } from '../tools/XernerxWarn.js';
 import sharpyy from 'sharpyy';
 import { z } from 'zod';
 
+/**
+ * Handler responsible for loading and initializing message commands, slash commands,
+ * and context menu commands along with their built-in interaction/message listeners.
+ */
 export class CommandHandler extends BaseHandler {
+	/**
+	 * Constructs a new `CommandHandler` instance.
+	 *
+	 * @param client - The `XernerxClient` instance to register commands onto.
+	 */
 	constructor(client: XernerxClient) {
 		super(client);
 	}
@@ -114,10 +123,22 @@ export class CommandHandler extends BaseHandler {
 		new XernerxSuccess(`Loaded slash commands: ${this.client.commands.slash.map((command) => sharpyy(command.id, 'txYellow')).join(', ')}`);
 	}
 
+	/**
+	 * Loads a single context menu command from a specified file.
+	 *
+	 * @param file - The path to the file containing the context menu command to be loaded.
+	 * @returns A promise that resolves when the file has been successfully loaded.
+	 */
 	public async loadContextCommand(file: string) {
 		return await this.loadFile(file);
 	}
 
+	/**
+	 * Loads all context menu commands from the configured directory and registers the required interaction listeners.
+	 *
+	 * @param options - Configuration options for loading context menu commands, including the directory path.
+	 * @returns A promise that resolves when all context menu commands have been successfully loaded.
+	 */
 	public async loadContextCommands(options: ContextCommandHandlerOptions) {
 		const config = z
 			.object({

@@ -6,12 +6,25 @@ import { EventBuilderOptions } from '../interfaces/EventBuilderOptions.js';
 import { XernerxWarn } from '../tools/XernerxWarn.js';
 import sharpyy from 'sharpyy';
 
+/**
+ * Builder class for defining Discord client events, process events, or custom emitter events (such as `@xernerx/hooks`).
+ */
 export class EventBuilder extends BaseBuilder {
+	/** Static discriminator identifying this builder as a Xernerx event. */
 	declare public readonly filetype: 'XernerxEvent';
+	/** The name of the event to listen for. */
 	declare public readonly name: ClientEvents | keyof ClientEvents | (string & {});
+	/** The name of the event emitter on the client or handler (defaults to `'client'`). */
 	declare public readonly emitter: string;
+	/** Whether the event listener should only trigger once. */
 	declare public readonly once: boolean;
 
+	/**
+	 * Constructs a new `EventBuilder` instance.
+	 *
+	 * @param id - A unique identifier for the event.
+	 * @param options - Configuration options for the event, including name, emitter, and once behavior.
+	 */
 	constructor(id: string, options: EventBuilderOptions) {
 		super(id, options);
 

@@ -7,7 +7,14 @@ import { InteractionArguments } from '../model/InteractionArguments.js';
 import { SlashCommandValidator } from '../validators/SlashCommandValidator.js';
 import { InhibitorValidator } from '../validators/InhibitorValidator.js';
 
+/**
+ * Built-in event listener for `slashCommandInteraction` that handles autocomplete,
+ * runs inhibitors and validators, formats options, and executes slash commands.
+ */
 export class XernerxSlashCommandInteractionEvent extends EventBuilder {
+	/**
+	 * Constructs the `XernerxSlashCommandInteractionEvent` listener.
+	 */
 	constructor() {
 		super('XernerxSlashCommandInteractionEvent', {
 			name: 'slashCommandInteraction',
@@ -16,6 +23,12 @@ export class XernerxSlashCommandInteractionEvent extends EventBuilder {
 		});
 	}
 
+	/**
+	 * Handles an incoming chat input (slash) command interaction.
+	 *
+	 * @param interaction - The Discord chat input command interaction.
+	 * @returns A promise that resolves when the slash command finishes processing.
+	 */
 	override async run(interaction: ChatInputCommandInteraction) {
 		const command = this.client.commands.slash.get(interaction.commandName);
 

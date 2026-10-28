@@ -11,10 +11,20 @@ import { XernerxError } from '../tools/XernerxError.js';
 import fs from 'fs';
 import path from 'path';
 
+/**
+ * Base handler class responsible for discovering, importing, and registering
+ * builder modules (events, commands, inhibitors, and extensions) on `XernerxClient`.
+ */
 export class BaseHandler {
+	/** The `XernerxClient` instance managed by this handler. */
 	declare public readonly client: XernerxClient;
 	[index: string]: Record<string, any>;
 
+	/**
+	 * Constructs a new `BaseHandler` instance.
+	 *
+	 * @param client - The `XernerxClient` instance to register modules onto.
+	 */
 	constructor(client: XernerxClient) {
 		this.client = client;
 	}
@@ -131,6 +141,12 @@ export class BaseHandler {
 		return builder;
 	}
 
+	/**
+	 * Instantiates and imports one or more built-in `EventBuilder` classes onto the client.
+	 *
+	 * @param builders - Array of `EventBuilder` constructors to instantiate and register.
+	 * @returns A promise that resolves when all builders have been imported.
+	 */
 	protected async loadBuilder(...builders: Array<typeof EventBuilder>) {
 		for (const builder of builders) {
 			this.importFile(new builder('', { name: '' }));

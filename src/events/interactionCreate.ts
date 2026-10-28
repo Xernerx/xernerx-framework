@@ -7,7 +7,15 @@ import { XernerxUser } from '../model/XernerxUser.js';
 import { InteractionUtil } from '../util/InteractionUtil.js';
 import { InhibitorValidator } from '../validators/InhibitorValidator.js';
 
+/**
+ * Built-in `interactionCreate` event listener that hydrates `interaction.user` (`XernerxUser`)
+ * and `interaction.util` (`InteractionUtil`), runs interaction inhibitors, and dispatches
+ * specialized interaction events.
+ */
 export class XernerxInteractionCreateEvent extends EventBuilder {
+	/**
+	 * Constructs the `XernerxInteractionCreateEvent` listener.
+	 */
 	constructor() {
 		super('XernerxInteractionCreateEvent', {
 			name: 'interactionCreate',
@@ -16,8 +24,16 @@ export class XernerxInteractionCreateEvent extends EventBuilder {
 		});
 	}
 
+	/**
+	 * Processes an incoming Discord interaction and emits specialized framework interaction events.
+	 *
+	 * @param interaction - The incoming Discord interaction.
+	 * @returns A promise that resolves when the interaction has been dispatched.
+	 */
 	override async run(interaction: Interaction) {
 		interaction.user = new XernerxUser(interaction.client, interaction.user);
+
+		await interaction.user.fetchEngagement();
 
 		interaction.util = new InteractionUtil(this.client as Interaction['client'], interaction);
 

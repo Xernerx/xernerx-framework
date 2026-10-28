@@ -5,8 +5,17 @@ import { Message } from 'discord.js';
 import { EventBuilder } from '../build/EventBuilder.js';
 import { XernerxUser } from '../model/XernerxUser.js';
 import { MessageUtil } from '../util/MessageUtil.js';
+import { BaseValidator } from '../validators/BaseValidator.js';
 
+/**
+ * Built-in `messageCreate` event listener that parses message commands, hydrates
+ * `message.user` (`XernerxUser`) and `message.util` (`MessageUtil`), validates requirements,
+ * and executes matching message commands.
+ */
 export class XernerxMessageCreateEvent extends EventBuilder {
+	/**
+	 * Constructs the `XernerxMessageCreateEvent` listener.
+	 */
 	constructor() {
 		super('XernerxMessageCreateEvent', {
 			name: 'messageCreate',
@@ -15,6 +24,12 @@ export class XernerxMessageCreateEvent extends EventBuilder {
 		});
 	}
 
+	/**
+	 * Processes a newly created Discord message and executes any matching message command.
+	 *
+	 * @param message - The incoming Discord message.
+	 * @returns A promise that resolves when message command execution completes.
+	 */
 	override async run(message: Message) {
 		message.user = new XernerxUser(message.client, message.author);
 
@@ -30,6 +45,8 @@ export class XernerxMessageCreateEvent extends EventBuilder {
 		const command = this.client.commands.message.get(message.util.parsed.command);
 
 		if (!command) return;
+
+		await message.user.fetchEngagement();
 
 		if (
 			this.client.handler.message.mention &&
@@ -47,6 +64,10 @@ export class XernerxMessageCreateEvent extends EventBuilder {
 
 		try {
 			await message.client.emit('commandStart', message, {}, command);
+
+			const validation = new BaseValidator(message, command);
+
+			if (!(await validation.validate())) return;
 
 			await command?.exec(message, message.util.args);
 

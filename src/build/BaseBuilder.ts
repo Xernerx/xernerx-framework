@@ -6,7 +6,11 @@ import { InhibitorBuilderOptions } from '../interfaces/InhibitorBuilderOptions.j
 import { SlashCommandBuilderOptions } from '../interfaces/SlashCommandBuilderOptions.js';
 import { XernerxClient } from '../client/XernerxClient.js';
 
+/**
+ * Base class for all Xernerx builders (events, commands, and inhibitors).
+ */
 export class BaseBuilder {
+	/** The `XernerxClient` instance associated with this builder. */
 	declare public client: XernerxClient;
 
 	/**
@@ -17,6 +21,7 @@ export class BaseBuilder {
 	 *                  XernerxSlashCommandBuilderOptions or XernerxEventBuilderOptions.
 	 */
 	constructor(
+		/** Unique identifier for this builder instance. */
 		public readonly id: string,
 		options: SlashCommandBuilderOptions | EventBuilderOptions | ContextCommandBuilderOptions | InhibitorBuilderOptions
 	) {

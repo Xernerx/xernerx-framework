@@ -7,7 +7,14 @@ import { XernerxUser } from '../model/XernerxUser.js';
 import { ContextCommandValidator } from '../validators/ContextCommandValidator.js';
 import { InhibitorValidator } from '../validators/InhibitorValidator.js';
 
+/**
+ * Built-in event listener for `contextCommandInteraction` that validates, defers,
+ * and executes user and message context menu commands.
+ */
 export class XernerxContextCommandInteractionEvent extends EventBuilder {
+	/**
+	 * Constructs the `XernerxContextCommandInteractionEvent` listener.
+	 */
 	constructor() {
 		super('xernerxContextCommandInteraction', {
 			name: 'contextCommandInteraction',
@@ -16,6 +23,12 @@ export class XernerxContextCommandInteractionEvent extends EventBuilder {
 		});
 	}
 
+	/**
+	 * Handles an incoming user or message context menu command interaction.
+	 *
+	 * @param interaction - The Discord user or message context menu command interaction.
+	 * @returns A promise that resolves when the context menu command finishes executing.
+	 */
 	override async run(interaction: UserContextMenuCommandInteraction | MessageContextMenuCommandInteraction) {
 		const command = this.client.commands.context.get(interaction.commandName);
 
@@ -24,7 +37,7 @@ export class XernerxContextCommandInteractionEvent extends EventBuilder {
 		let options = { interaction } as ContextCommandOptions<'user'> | ContextCommandOptions<'message'>;
 
 		if (interaction.isUserContextMenuCommand()) {
-			(options as ContextCommandOptions<'user'>).user = new XernerxUser(this.client, interaction.targetUser);
+			(options as ContextCommandOptions<'user'>).user = await new XernerxUser(this.client, interaction.targetUser).fetchEngagement();
 		}
 
 		if (interaction.isMessageContextMenuCommand()) {

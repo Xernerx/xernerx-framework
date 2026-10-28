@@ -6,7 +6,14 @@ import { EventBuilder } from '../build/EventBuilder.js';
 import { XernerxUser } from '../model/XernerxUser.js';
 import { MessageUtil } from '../util/MessageUtil.js';
 
+/**
+ * Built-in `messageUpdate` event listener that re-evaluates and updates bot responses
+ * when a message command is edited.
+ */
 export class XernerxMessageUpdateEvent extends EventBuilder {
+	/**
+	 * Constructs the `XernerxMessageUpdateEvent` listener.
+	 */
 	constructor() {
 		super('XernerxMessageUpdateEvent', {
 			name: 'messageUpdate',
@@ -15,6 +22,13 @@ export class XernerxMessageUpdateEvent extends EventBuilder {
 		});
 	}
 
+	/**
+	 * Handles an updated Discord message and re-executes the matching message command if applicable.
+	 *
+	 * @param oldMessage - The message state prior to the edit.
+	 * @param message - The updated Discord message.
+	 * @returns A promise that resolves when the edited message command finishes executing.
+	 */
 	override async run(oldMessage: Message, message: Message) {
 		message.user = new XernerxUser(message.client, message.author);
 
