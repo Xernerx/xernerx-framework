@@ -15,8 +15,8 @@ importers:
         specifier: ^0.1.0
         version: 0.1.0
       '@xernerx/terminal':
-        specifier: ^1.1.13
-        version: 1.1.13
+        specifier: ^1.2.0
+        version: 1.2.0
       discord-hybrid-sharding:
         specifier: ^3.0.0
         version: 3.0.1
@@ -587,8 +587,8 @@ packages:
     resolution: {integrity: sha512-6CS/HEmbSpoIi+DaAgjXQa7ilxTB4GAxwDHXYzvLyk+Zyyrp1V1kLBS5uIqjqb99M7Tnq2r2CiZdKLCkKoj3rw==}
     engines: {node: '>=24'}
 
-  '@xernerx/terminal@1.1.13':
-    resolution: {integrity: sha512-LoHLy5+KXbImzb1NO2dRXrbkN2KXziDktnW9xcFE8v0W0uhKGHgrqaMWJQkfUG05WJokqaLo5u5pyc0S0o68Eg==}
+  '@xernerx/terminal@1.2.0':
+    resolution: {integrity: sha512-0ZMxqETGgNea1s1Uv5qDIp/7mciG4lpPawtzTUaYvqX6NylrKBNDvb1GB+u5eSdAeJRFj7ZNNa8Eb16CS5BFlw==}
     engines: {node: '>=24'}
 
   acorn@8.19.0:
@@ -1678,7 +1678,7 @@ snapshots:
 
   '@xernerx/extension-builder@0.1.0': {}
 
-  '@xernerx/terminal@1.1.13':
+  '@xernerx/terminal@1.2.0':
     dependencies:
       boxen: 8.0.1
       chalk: 5.6.2

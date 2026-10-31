@@ -1,5 +1,11 @@
 <!-- @format -->
 
+## 1.1.2
+
+### Patch Changes
+
+- Delegate startup version checks in `XernerxInitial` to `@xernerx/terminal`'s unified `t.update()` checker instead of comparing `@xernerx/framework` against `xernerx`.
+
 ## 1.1.1
 
 ### Patch Changes
