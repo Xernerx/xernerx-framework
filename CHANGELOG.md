@@ -1,5 +1,11 @@
 <!-- @format -->
 
+## 1.1.3
+
+### Patch Changes
+
+- Fix `XernerxUser.premium()` to accept an optional SKU ID filter and exclude ended/consumed entitlements, fix `XernerxUser.synchronize()` and `XernerxMonitisation.create()` test entitlement handling, and implement `XernerxGuild` monetization methods (`premium`, `entitlements`, `consumeEntitlement`).
+
 ## 1.1.2
 
 ### Patch Changes

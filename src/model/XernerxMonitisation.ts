@@ -1,7 +1,7 @@
 /** @format */
 
 import { MonetizationAPI } from '@discordjs/core';
-import { Client, RequestData, RESTGetAPIEntitlementsQuery } from 'discord.js';
+import { Client, RequestData, RESTGetAPIEntitlementsQuery, SKUFlags } from 'discord.js';
 
 /**
  * Wrapper around `@discordjs/core`'s `MonetizationAPI` bound to the current application client,
@@ -54,20 +54,23 @@ export class XernerxMonitisation extends MonetizationAPI {
 	}
 
 	/**
-	 * Creates a test entitlement for a specified user and SKU.
+	 * Creates a test entitlement for a specified user or guild and SKU.
 	 *
 	 * @param id - The unique identifier of the SKU for which the entitlement is to be created.
-	 * @param user - The unique identifier of the user who will own the entitlement.
-	 * @returns A promise that resolves with the created test entitlement, or undefined if the SKU is not found.
+	 * @param ownerId - The unique identifier of the user or guild that will own the entitlement.
+	 * @param ownerType - Optional explicit owner type (`1` for guild subscription, `2` for user subscription). Inferred from `sku.flags` when omitted.
+	 * @returns A promise that resolves with the created test entitlement, or `undefined` if the SKU is not found.
 	 */
-	async create(id: string, user: string) {
+	async create(id: string, ownerId: string, ownerType?: 1 | 2) {
 		const skus = await this.sku();
 
 		const sku = skus.find((s) => s.id === id);
 
 		if (!sku) return;
 
-		return await this.createTestEntitlement(this.client.user.id, { owner_id: user, owner_type: sku.type == 5 ? 2 : 1, sku_id: id });
+		const resolvedOwnerType = ownerType ?? ((sku.flags & SKUFlags.GuildSubscription) !== 0 ? 1 : 2);
+
+		return await this.createTestEntitlement(this.client.user.id, { owner_id: ownerId, owner_type: resolvedOwnerType, sku_id: id });
 	}
 
 	/**

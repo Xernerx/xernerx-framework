@@ -1,6 +1,6 @@
 /** @format */
 
-import { Client, EntitlementType, SKUType, User } from 'discord.js';
+import { Client, EntitlementType, SKUFlags, SKUType, User } from 'discord.js';
 
 import { XernerxMonitisation } from './XernerxMonitisation.js';
 import { XernerxClient } from '../client/XernerxClient.js';
@@ -73,65 +73,77 @@ export class XernerxUser extends User {
 	}
 
 	/**
-	 * Checks if the user has any entitlements, indicating premium status.
+	 * Checks if the user has any active (non-ended, non-consumed) entitlements, indicating premium status.
 	 *
-	 * @param id - The ID of the user to check for premium entitlements.
-	 * @returns A promise that resolves to a boolean indicating whether the user has any entitlements (true) or not (false).
+	 * @param skuId - Optional SKU ID or array of SKU IDs to filter by. When omitted, checks if the user holds any active entitlement.
+	 * @returns A promise that resolves to `true` if the user holds an active matching entitlement, or `false` otherwise.
 	 */
-	async premium(id: string) {
-		const entitlements = await this.monitisation.entitlements({ user_id: this.id });
+	async premium(skuId?: string | Array<string>): Promise<boolean> {
+		const skuIds = Array.isArray(skuId) ? skuId.filter(Boolean).join(',') : skuId?.trim();
+		const entitlements = await this.monitisation.entitlements({
+			user_id: this.id,
+			exclude_ended: true,
+			...(skuIds ? { sku_ids: skuIds } : {}),
+		});
 
-		if (!entitlements.length) return false;
-		return true;
+		const now = Date.now();
+		const active = entitlements.filter((entitlement) => !entitlement.deleted && !entitlement.consumed && (!entitlement.ends_at || Date.parse(entitlement.ends_at) > now));
+
+		return active.length > 0;
 	}
 
 	/**
 	 * Retrieves the entitlements for the user and maps them to their corresponding SKU.
 	 *
+	 * @param excludeEnded - Whether to exclude expired entitlements (defaults to `true`).
 	 * @returns A promise that resolves to an array of objects, each containing an entitlement and its associated SKU.
 	 */
-	async entitlements() {
-		const entitlements = await this.monitisation.entitlements({ user_id: this.id });
+	async entitlements(excludeEnded = true) {
+		const entitlements = await this.monitisation.entitlements({ user_id: this.id, exclude_ended: excludeEnded });
 
-		const SKU = await this.monitisation.sku();
+		const xClient = this.client as XernerxClient;
+		const SKU = xClient.monitisation?.skus?.length ? xClient.monitisation.skus : await this.monitisation.sku();
 
-		return entitlements.map((entitlement) => ({ entitlement: entitlement, sku: SKU.find((sku) => sku.id === entitlement.sku_id) }));
+		return entitlements.map((entitlement) => ({ entitlement, sku: SKU.find((sku) => sku.id === entitlement.sku_id) }));
 	}
 
 	/**
 	 * Synchronizes the user's entitlements with the current SKU data and performs necessary actions
-	 * such as consuming, deleting, or creating entitlements based on their type and the client's premium settings.
+	 * such as consuming consumable items, cleaning up test entitlements when owner test mode is disabled,
+	 * or granting test entitlements to configured bot owners.
 	 *
 	 * @returns A promise that resolves to an array of error messages, if any occurred during the synchronization process.
 	 */
 	async synchronize() {
 		const errors: Array<string> = [];
 		const client = this.client as XernerxClient;
-		const skus = await this.monitisation.sku();
-		const entitlements = await this.monitisation.entitlements({ user_id: this.id });
+		const skus = client.monitisation?.skus?.length ? client.monitisation.skus : await this.monitisation.sku();
+		const entitlements = await this.monitisation.entitlements({ user_id: this.id, exclude_ended: true });
 
 		for (const entitlement of entitlements) {
-			if (!client.premium.synchronize) continue;
+			if (!client.premium?.synchronize) continue;
 
-			const sku = skus.find((sku) => sku.id === entitlement.sku_id);
+			const sku = skus.find((s) => s.id === entitlement.sku_id);
 
 			if (!sku) continue;
 
-			if (sku.type == SKUType.Consumable && !entitlement.consumed && client.premium.consume) this.monitisation.consume(entitlement.id).catch((e) => errors.push(e.message));
-
-			if (sku.type == SKUType.Durable) {
+			if (sku.type === SKUType.Consumable && !entitlement.consumed && client.premium?.consume) {
+				await this.monitisation.consume(entitlement.id).catch((e) => errors.push(e.message));
 			}
 
-			if (sku.type == SKUType.Subscription && entitlement.type == EntitlementType.ApplicationSubscription) this.monitisation.delete(entitlement.id).catch((e) => errors.push(e.message));
-
-			if (sku.type == SKUType.SubscriptionGroup && entitlement.type == EntitlementType.ApplicationSubscription) this.monitisation.delete(entitlement.id).catch((e) => errors.push(e.message));
+			if ((sku.type === SKUType.Subscription || sku.type === SKUType.SubscriptionGroup) && entitlement.type === EntitlementType.TestModePurchase && !client.premium?.owners) {
+				await this.monitisation.delete(entitlement.id).catch((e) => errors.push(e.message));
+			}
 		}
 
 		for (const sku of skus) {
-			if (!client.premium.owners) continue;
+			if (!client.premium?.owners) continue;
 
-			if (sku.type == 5) {
-				await this.monitisation.create(sku.id, this.id).catch((e) => errors.push(e.message));
+			const isUserSubscription = sku.type === SKUType.Subscription && (sku.flags & SKUFlags.GuildSubscription) === 0;
+			const alreadyHasEntitlement = entitlements.some((e) => e.sku_id === sku.id && !e.deleted);
+
+			if (isUserSubscription && !alreadyHasEntitlement) {
+				await this.monitisation.create(sku.id, this.id, 2).catch((e) => errors.push(e.message));
 			}
 		}
 

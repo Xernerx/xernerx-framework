@@ -47,7 +47,9 @@ export class BaseValidator {
 	public async premium() {
 		if (!this.command.premium) return;
 
-		const premium = await this.interaction.user.premium('');
+		const user = (this.interaction as Interaction).user || (this.interaction as Message).user;
+		const skuFilter = typeof this.command.premium === 'string' ? this.command.premium : undefined;
+		const premium = Boolean(await user?.premium(skuFilter));
 
 		if (!premium) {
 			this.emit({ type: 'premiumCommand', message: 'This command requires a premium subscription.', data: [] });
