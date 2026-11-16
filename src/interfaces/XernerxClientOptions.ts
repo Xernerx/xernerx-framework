@@ -21,6 +21,8 @@ export interface UserEngagementData {
 	rating: number | null;
 	/** Total credits tipped by the user to the bot. */
 	tipped: number;
+	/** Whether the user is shadowbanned (excluded from global leaderboards) on Xernerx. */
+	shadowban?: boolean;
 	/** Unix timestamp (in milliseconds) when this cache entry was last updated. */
 	updatedAt: number;
 }

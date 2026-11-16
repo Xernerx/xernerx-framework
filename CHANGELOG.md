@@ -1,5 +1,20 @@
 <!-- @format -->
 
+## 1.2.0
+
+### Minor Changes
+
+- <!-- @format -->
+  
+  ## `XernerxUser.shadowban` Property & Engagement State Enrichment
+  
+  Added `shadowban: boolean` to `XernerxUser` and `UserEngagementData` so bot commands and leaderboard handlers can check whether a user is shadowbanned from global leaderboards.
+  
+  ### Added
+  
+  - **`XernerxUser.shadowban` Boolean**: Added `public shadowban = false` to `XernerxUser` (`src/model/XernerxUser.ts`), populated automatically via `user.fetch()`, `@xernerx/hooks` engagement state, and `GET /v1/bots/:id/users/:userId`.
+  - **`UserEngagementData.shadowban`**: Extended `UserEngagementData` in `XernerxClientOptions` and `XernerxClient` to propagate `shadowban`.
+
 ## 1.1.3
 
 ### Patch Changes

@@ -23,6 +23,8 @@ export class XernerxUser extends User {
 	public rating: number | null = null;
 	/** Total credits tipped by the user to this bot on Xernerx. */
 	public tipped = 0;
+	/** Whether the user is shadowbanned (excluded from global leaderboards) on Xernerx. */
+	public shadowban = false;
 
 	/**
 	 * Constructs a new `XernerxUser` instance and hydrates engagement fields from the client's in-memory cache if available.
@@ -49,6 +51,7 @@ export class XernerxUser extends User {
 			this.reviewed = Boolean(cached.reviewed);
 			this.rating = cached.rating ?? null;
 			this.tipped = typeof cached.tipped === 'number' ? cached.tipped : 0;
+			this.shadowban = Boolean(cached.shadowban);
 		}
 	}
 
@@ -68,6 +71,7 @@ export class XernerxUser extends User {
 			this.reviewed = Boolean(data.reviewed);
 			this.rating = data.rating ?? null;
 			this.tipped = typeof data.tipped === 'number' ? data.tipped : 0;
+			this.shadowban = Boolean(data.shadowban);
 		}
 		return this;
 	}

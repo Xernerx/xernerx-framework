@@ -12,7 +12,7 @@
 
 - **Modular Builders & Handlers**: Build and organize your bot with `XernerxClient`, `XernerxShardClient`, `SlashCommandBuilder`, `MessageCommandBuilder`, `ContextCommandBuilder`, `EventBuilder`, and `InhibitorBuilder`.
 - **Built-in Engagement & Monetization Requirements**: Gate any command behind Discord premium entitlements (`premium`), bot votes (`voted`), reviews (`reviewed`), or credit tips (`tipped: true | number`).
-- **Hydrated `XernerxUser`**: Every `interaction.user` and `message.user` is automatically wrapped in `XernerxUser`, exposing `.voted`, `.reviewed`, `.tipped`, `.premium()`, and `.fetchEngagement()` backed by an in-memory 15-minute TTL cache and optional real-time `@xernerx/hooks` integration.
+- **Hydrated `XernerxUser`**: Every `interaction.user` and `message.user` is automatically wrapped in `XernerxUser`, exposing `.voted`, `.reviewed`, `.tipped`, `.shadowban`, `.premium()`, and `.fetchEngagement()` backed by an in-memory 15-minute TTL cache and optional real-time `@xernerx/hooks` integration.
 - **Event Builder & Custom Emitters**: Listen to Discord client events, Node.js `process` events, framework lifecycle events (`commandStart`, `commandFinish`, `commandBlock`, `commandError`), or custom emitters like `'hooks'`.
 - **Inhibitor Builder**: Intercept interactions and commands with `pre` and `post` hooks via `InhibitorBuilder`.
 - **Extension System**: Plug in official and custom extensions (`@xernerx/commands`, `@xernerx/stats`, `@xernerx/hooks`) through `this.modules.extensionHandler.loadExtensions(...)`.
@@ -274,6 +274,7 @@ interaction.user.nextVoteAt; // string | null (ISO timestamp)
 interaction.user.reviewed; // boolean
 interaction.user.rating; // number | null
 interaction.user.tipped; // number (total credits tipped)
+interaction.user.shadowban; // boolean (whether user is shadowbanned from global leaderboards)
 
 // Force-refresh engagement state from the Xernerx API (bypasses TTL cache)
 await interaction.user.fetchEngagement(true);

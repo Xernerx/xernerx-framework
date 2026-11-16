@@ -341,6 +341,7 @@ export class XernerxClient extends Client {
 						reviewed: Boolean(body.reviewed),
 						rating: typeof body.rating === 'number' ? body.rating : null,
 						tipped: typeof body.tipped === 'number' && Number.isFinite(body.tipped) ? body.tipped : 0,
+						shadowban: Boolean(body.shadowban),
 						updatedAt: Date.now(),
 					};
 					this.userEngagementCache.set(compositeKey, nextState);
