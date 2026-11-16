@@ -35,7 +35,7 @@
 		"framework"
 	],
 	"author": "Xernerx Studios",
-	"license": "MIT",
+	"license": "Apache-2.0",
 	"description": "",
 	"dependencies": {
 		"@xernerx/extension-builder": "^0.1.0",
