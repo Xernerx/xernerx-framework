@@ -7,6 +7,11 @@ on:
     branches:
       - main
       - beta
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
   build-and-publish:
@@ -14,6 +19,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -38,21 +45,23 @@ jobs:
       - name: Run Prettier
         run: pnpm exec prettier --write .
 
-      - name: Get package info
+      - name: Get package info & check publish status
         id: pkg
         run: |
-          echo "name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
-          echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          PUBLISHED=$(npm view "${NAME}@${VERSION}" version 2>/dev/null || echo "")
 
-      - name: Generate CHANGELOG from GitHub Release
-        run: |
-          mkdir -p documents
-          TAG=v${{ steps.pkg.outputs.version }}
-          RELEASE_NOTES=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q ".body" || echo "")
-          # Ensure CHANGELOG.md exists even if release notes are empty
-          echo "${RELEASE_NOTES:-}" > documents/CHANGELOG.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_ACCESS_TOKEN }}
+          echo "name=${NAME}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+
+          if [ "$PUBLISHED" != "$VERSION" ]; then
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+            echo "Version ${VERSION} is not published yet on npm. Proceeding with publish."
+          else
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+            echo "Version ${VERSION} is already published on npm. Skipping npm publish."
+          fi
 
       - name: Generate docs
         run: |
@@ -66,6 +75,7 @@ jobs:
           pnpm exec typedoc --json typedoc_out/docs.json src
 
       - name: Publish to npmjs.org
+        if: steps.pkg.outputs.should_publish == 'true'
         run: |
           if [ "${GITHUB_REF##*/}" = "beta" ]; then
             npm publish --tag beta --access public
@@ -77,25 +87,39 @@ jobs:
 
       - name: Configure npm for GitHub Packages
         run: |
-          echo "@xernerx:registry=https://npm.pkg.github.com///npm.pkg.github.com/:_authToken=${XERNERX_ACCESS_TOKEN}" > ~/.npmrc
+          NPMRC_FILE="${NPM_CONFIG_USERCONFIG:-$HOME/.npmrc}"
+          printf "@xernerx:registry=https://npm.pkg.github.com/\n//npm.pkg.github.com/:_authToken=%s\n" "${NODE_AUTH_TOKEN}" > "${NPMRC_FILE}"
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to GitHub Packages
-        if: false # disabled until scoped package is ready
-        run: npm publish --registry=https://npm.pkg.github.com/ --access public
+        run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          GH_PKG_NAME="@xernerx/${PKG_NAME#@xernerx/}"
+          node -e "const fs=require('fs'),p=JSON.parse(fs.readFileSync('package.json','utf8'));p.name='${GH_PKG_NAME}';p.repository={type:'git',url:'git+https://github.com/${GITHUB_REPOSITORY}.git'};p.publishConfig={registry:'https://npm.pkg.github.com/',access:'public'};fs.writeFileSync('package.json',JSON.stringify(p,null,'\t')+'\n');"
+          if [ "${GITHUB_REF##*/}" = "beta" ]; then
+            npm publish --registry=https://npm.pkg.github.com/ --tag beta --access public || echo "GitHub Packages publish skipped or already exists"
+          else
+            npm publish --registry=https://npm.pkg.github.com/ --tag latest --access public || echo "GitHub Packages publish skipped or already exists"
+          fi
+          git checkout -- package.json
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.XERNERX_ACCESS_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         id: gh-release
+        if: steps.pkg.outputs.should_publish == 'true' || github.event_name == 'workflow_dispatch'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.pkg.outputs.version }}
           name: ${{ steps.pkg.outputs.name }} v${{ steps.pkg.outputs.version }}
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.XERNERX_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.XERNERX_ACCESS_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Push docs to docs repo
+        if: steps.pkg.outputs.should_publish == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           git clone https://x-access-token:${{ secrets.XERNERX_ACCESS_TOKEN }}@github.com/Xernerx/docs.git docs-repo
           cd docs-repo
