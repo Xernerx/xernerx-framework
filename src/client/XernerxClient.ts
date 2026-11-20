@@ -1,5 +1,7 @@
 /** @format */
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { Client, ClientOptions, Collection, RESTGetAPISKUsResult } from 'discord.js';
 import { ClusterClient, DjsDiscordClient, getInfo } from 'discord-hybrid-sharding';
 
@@ -18,7 +20,7 @@ import { SlashCommandBuilder } from '../build/SlashCommandBuilder.js';
 import { SlashCommandHandlerOptions } from '../interfaces/SlashCommandHandlerOptions.js';
 import { UserEngagementData, XernerxClientOptions } from '../interfaces/XernerxClientOptions.js';
 import { XernerxClientStats } from '../interfaces/XernerxClientStats.js';
-import { XernerxError } from '../tools/XernerxError.js';
+import { XernerxError, registerXernerxErrorReporter } from '../tools/XernerxError.js';
 import { XernerxInfo } from '../tools/XernerxInfo.js';
 import { XernerxInitial } from '../tools/XernerxInitial.js';
 import { XernerxMonitisation } from '../model/XernerxMonitisation.js';
@@ -209,6 +211,215 @@ export class XernerxClient extends Client {
 			id: this.cluster?.id,
 			global: this.settings.global,
 		};
+
+		this.setupErrorTelemetry();
+	}
+
+	private internalWs: any = null;
+	private internalWsReady = false;
+	private internalWsConnecting: Promise<void> | null = null;
+	private internalWsReqId = 900_000;
+	private cachedServiceId: string | null = null;
+
+	private resolveServiceId(): string {
+		if (process.env.SERVICE_ID?.trim()) {
+			return process.env.SERVICE_ID.trim().toLowerCase();
+		}
+		if (this.cachedServiceId) return this.cachedServiceId;
+
+		try {
+			const pkgPath = path.resolve(process.cwd(), 'package.json');
+			if (fs.existsSync(pkgPath)) {
+				const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+				const rawName = String(pkg?.name || '')
+					.trim()
+					.toLowerCase();
+				if (rawName === '@xernerx/app') {
+					this.cachedServiceId = 'app-bot';
+					return 'app-bot';
+				}
+				if (rawName) {
+					const normalized = rawName.replace(/^@xernerx\//, '').replace(/[^a-z0-9_-]/g, '-');
+					this.cachedServiceId = normalized;
+					return normalized;
+				}
+			}
+		} catch {}
+
+		if (this.user?.username) {
+			return this.user.username.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+		}
+		return 'bot';
+	}
+
+	private resolveEnvironment(): 'production' | 'canary' | 'development' {
+		const raw = String(process.env.ENVIRONMENT || process.env.NODE_ENV || 'production')
+			.trim()
+			.toLowerCase();
+		if (raw === 'development' || raw === 'dev') return 'development';
+		if (raw === 'canary') return 'canary';
+		return 'production';
+	}
+
+	/**
+	 * Dispatches an error log entry to the central Xernerx Suite WebSocket gateway (`xernerx/errors`).
+	 * Reuses `this.websocket` when attached, or opens a lightweight background WebSocket session.
+	 *
+	 * @param errorOrPayload - Error instance, message string, or structured error descriptor.
+	 * @param meta - Optional contextual metadata (`{ command, guildId, userId, shardId }`).
+	 */
+	public async reportError(
+		errorOrPayload:
+			| Error
+			| string
+			| {
+					id?: string;
+					service?: string;
+					message: string;
+					stack?: string | null;
+					level?: 'error' | 'warn' | 'fatal';
+					meta?: Record<string, any>;
+			  },
+		meta: Record<string, any> = {}
+	): Promise<void> {
+		try {
+			const service =
+				typeof errorOrPayload === 'object' && !(errorOrPayload instanceof Error) && (errorOrPayload.service || errorOrPayload.id)
+					? String(errorOrPayload.service || errorOrPayload.id)
+					: this.resolveServiceId();
+
+			const message =
+				typeof errorOrPayload === 'string' ? errorOrPayload : errorOrPayload instanceof Error ? errorOrPayload.message || String(errorOrPayload) : errorOrPayload.message || 'Unknown error';
+
+			const stack = errorOrPayload instanceof Error ? errorOrPayload.stack || null : typeof errorOrPayload === 'object' && errorOrPayload !== null ? errorOrPayload.stack || null : null;
+
+			const level = typeof errorOrPayload === 'object' && !(errorOrPayload instanceof Error) && errorOrPayload.level ? errorOrPayload.level : 'error';
+
+			const combinedMeta = {
+				...(typeof errorOrPayload === 'object' && !(errorOrPayload instanceof Error) && errorOrPayload.meta ? errorOrPayload.meta : {}),
+				...meta,
+				...(this.shardId !== null ? { shardId: this.shardId } : {}),
+				...(this.user?.id ? { botId: this.user.id } : {}),
+				memoryMb: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+			};
+
+			const body = {
+				id: service,
+				service,
+				environment: this.resolveEnvironment(),
+				level,
+				message,
+				stack,
+				meta: combinedMeta,
+			};
+
+			const attachedWs = (this as any).websocket;
+			if (attachedWs && typeof attachedWs.create === 'function') {
+				await attachedWs.create('xernerx', 'errors', body).catch(() => {});
+				return;
+			}
+
+			const token = (process.env.WS_TOKEN || process.env.XERNERX_APP_TOKEN || process.env.XERNERX_TOKEN || process.env.API_TOKEN || '').trim();
+			const WSClass = (globalThis as any).WebSocket;
+			if (!token || !WSClass) return;
+
+			if (!this.internalWsReady || !this.internalWs || this.internalWs.readyState !== 1) {
+				if (!this.internalWsConnecting) {
+					const isDev = this.resolveEnvironment() === 'development';
+					const baseUrl = (process.env.WS_URL || (isDev ? 'wss://ws.dev.xernerx.com' : 'wss://ws.xernerx.com')).trim();
+					const finalUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}`;
+
+					this.internalWsConnecting = new Promise<void>((resolve) => {
+						try {
+							const ws = new WSClass(finalUrl);
+							const timer = setTimeout(() => {
+								this.internalWsConnecting = null;
+								resolve();
+							}, 5000);
+
+							ws.onopen = () => {
+								clearTimeout(timer);
+								this.internalWs = ws;
+								this.internalWsReady = true;
+								this.internalWsConnecting = null;
+								resolve();
+							};
+							ws.onerror = () => {
+								clearTimeout(timer);
+								this.internalWsReady = false;
+								this.internalWsConnecting = null;
+								resolve();
+							};
+							ws.onclose = () => {
+								this.internalWsReady = false;
+								this.internalWs = null;
+							};
+						} catch {
+							this.internalWsConnecting = null;
+							resolve();
+						}
+					});
+				}
+				await this.internalWsConnecting;
+			}
+
+			if (this.internalWs && this.internalWs.readyState === 1) {
+				this.internalWs.send(
+					JSON.stringify({
+						id: ++this.internalWsReqId,
+						service: 'xernerx',
+						method: 'POST',
+						action: 'errors',
+						body,
+					})
+				);
+			}
+		} catch {
+			// Never disrupt bot execution if error reporting fails
+		}
+	}
+
+	private setupErrorTelemetry() {
+		registerXernerxErrorReporter((payload) => {
+			this.reportError({
+				message: payload.message,
+				stack: payload.stack,
+				level: payload.level || 'error',
+			}).catch(() => {});
+		});
+
+		this.on('commandError' as any, (interactionOrMessage: any, _options: any, command: any, error: Error) => {
+			this.reportError(error || new Error('Command execution failed'), {
+				source: 'commandError',
+				command: command?.id || command?.name || interactionOrMessage?.commandName || null,
+				guildId: interactionOrMessage?.guildId || interactionOrMessage?.guild?.id || null,
+				userId: interactionOrMessage?.user?.id || interactionOrMessage?.author?.id || null,
+			}).catch(() => {});
+		});
+
+		this.on('error', (error: Error) => {
+			this.reportError(error, { source: 'discordClientError' }).catch(() => {});
+		});
+
+		if (!(process as any).__xernerxErrorTelemetryBound) {
+			(process as any).__xernerxErrorTelemetryBound = true;
+
+			process.on('unhandledRejection', (reason: any) => {
+				const err = reason instanceof Error ? reason : new Error(String(reason || 'Unhandled promise rejection'));
+				this.reportError(err, { source: 'unhandledRejection' }).catch(() => {});
+			});
+
+			process.on('uncaughtExceptionMonitor', (error: Error) => {
+				this.reportError(
+					{
+						message: error?.message || String(error),
+						stack: error?.stack || null,
+						level: 'fatal',
+					},
+					{ source: 'uncaughtException' }
+				).catch(() => {});
+			});
+		}
 	}
 
 	/**

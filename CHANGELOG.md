@@ -1,5 +1,13 @@
 <!-- @format -->
 
+## 1.3.0
+
+### Minor Changes
+
+- <!-- @format -->
+  
+  Add centralized WebSocket error telemetry (`XernerxClient.reportError` and `registerXernerxErrorReporter` in `XernerxError`) and update `packageManager` to `pnpm@12.21.0`.
+
 ## 1.2.0
 
 ### Minor Changes

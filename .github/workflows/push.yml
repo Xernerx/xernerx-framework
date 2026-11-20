@@ -97,7 +97,7 @@ jobs:
 
       - name: Push docs to docs repo
         run: |
-          git clone https://github.com/Xernerx/docs.git docs-repo
+          git clone https://x-access-token:${{ secrets.XERNERX_ACCESS_TOKEN }}@github.com/Xernerx/docs.git docs-repo
           cd docs-repo
 
           # Detect remote default branch
